@@ -7,6 +7,7 @@ import {
   LatestInvoiceRaw,
   User,
   Revenue,
+  Customer,
 } from './definitions';
 import { formatCurrency } from './utils';
 
@@ -87,6 +88,36 @@ export async function fetchCardData() {
     console.error('Database Error:', error);
     throw new Error('Failed to card data.');
   }
+}
+export async function fetchCardCustomerData(id: string) {
+  // await new Promise((resolve) => setTimeout(resolve, 1000));
+try {
+  // You can probably combine these into a single SQL query
+  // However, we are intentionally splitting them to demonstrate
+  // how to initialize multiple queries in parallel with JS.
+  const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices where customer_id = ${id}`;
+  const invoiceStatusPromise = sql`SELECT
+       SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS "paid",
+       SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) AS "pending"
+       FROM invoices where customer_id = ${id}`;
+
+  const data = await Promise.all([
+    invoiceCountPromise,
+    invoiceStatusPromise,
+  ]);
+  const numberOfInvoices = Number(data[0].rows[0].count ?? '0');
+  const totalPaidInvoices = formatCurrency(data[1].rows[0].paid ?? '0');
+  const totalPendingInvoices = formatCurrency(data[1].rows[0].pending ?? '0');
+
+  return {
+    numberOfInvoices,
+    totalPaidInvoices,
+    totalPendingInvoices,
+  };
+} catch (error) {
+  console.error('Database Error:', error);
+  throw new Error('Failed to card data.');
+}
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -173,8 +204,7 @@ export async function fetchCustomers() {
   try {
     const data = await sql<CustomerField>`
       SELECT
-        id,
-        name
+        *
       FROM customers
       ORDER BY name ASC
     `;
@@ -184,6 +214,16 @@ export async function fetchCustomers() {
   } catch (err) {
     console.error('Database Error:', err);
     throw new Error('Failed to fetch all customers.');
+  }
+}
+export async function fetchCustomerById(id: string) {
+  try {
+    const user = await sql`SELECT * from CUSTOMERS where id=${id}`;
+    console.log(user)
+    return user.rows[0] as Customer;
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw new Error('Failed to fetch user.');
   }
 }
 
@@ -229,3 +269,4 @@ export async function getUser(email: string) {
     throw new Error('Failed to fetch user.');
   }
 }
+

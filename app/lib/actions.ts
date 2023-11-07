@@ -63,6 +63,7 @@ export async function createInvoice(prevState: any, formData: FormData) {
     };
   }
   const { customerId, amount, status } = validatedFields.data;
+  console.log("validated fields data",validatedFields.data)
   // Test it out:
   const amountInCents = amount * 100;
   const date = new Date().toISOString().split("T")[0];
@@ -107,7 +108,6 @@ export async function updateInvoice(id: string, formData: FormData) {
 }
 
 export async function deleteInvoice(id: string) {
-  throw new Error("Failed to Delete Invoice");
 
   // Unreachable code block
   try {
